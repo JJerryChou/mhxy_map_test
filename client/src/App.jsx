@@ -1,35 +1,102 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/layout/Layout';
+import LoginPage from './pages/LoginPage';
+import RecordPage from './pages/RecordPage';
+import HistoryPage from './pages/HistoryPage';
+import PredictionPage from './pages/PredictionPage';
+import { MobileEntryPage, MobileHistoryPage, MobilePredictionPage } from './pages/mobile';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import PriceManagementPage from './pages/PriceManagementPage';
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!user || user.role !== 'admin') return <Navigate to="/" />;
+  return children;
+};
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Protected Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <RecordPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/predict" element={
+            <ProtectedRoute>
+              <Layout>
+                <PredictionPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <Layout>
+                <HistoryPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Mobile Routes */}
+          <Route path="/mobile/entry" element={
+            <ProtectedRoute>
+              <Layout>
+                <MobileEntryPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/mobile/history" element={
+            <ProtectedRoute>
+              <Layout>
+                <MobileHistoryPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/mobile/predict" element={
+            <ProtectedRoute>
+              <Layout>
+                <MobilePredictionPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Admin Routes */}
+          <Route path="/admin/users" element={
+            <AdminRoute>
+              <Layout>
+                <UserManagementPage />
+              </Layout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/prices" element={
+            <AdminRoute>
+              <Layout>
+                <PriceManagementPage />
+              </Layout>
+            </AdminRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
