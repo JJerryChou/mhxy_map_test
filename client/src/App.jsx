@@ -10,6 +10,7 @@ import PredictionPage from './pages/PredictionPage';
 import { MobileEntryPage, MobileHistoryPage, MobilePredictionPage } from './pages/mobile';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import PriceManagementPage from './pages/PriceManagementPage';
+import MapSettingsPage from './pages/admin/MapSettingsPage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -90,6 +91,13 @@ function App() {
             <AdminRoute>
               <Layout>
                 <PriceManagementPage />
+              </Layout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/maps" element={
+            <AdminRoute>
+              <Layout>
+                <MapSettingsPage />
               </Layout>
             </AdminRoute>
           } />

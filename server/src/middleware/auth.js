@@ -1,7 +1,6 @@
 
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fantasy-westward-journey-secret-key';
+const { jwtSecret } = require('../config');
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -12,7 +11,7 @@ const authMiddleware = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, jwtSecret);
         req.user = decoded;
         next();
     } catch (err) {

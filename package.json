@@ -4,8 +4,10 @@
     "private": true,
     "scripts": {
         "install-all": "npm install && npm install --prefix client && npm install --prefix server",
-        "seed": "node server/seed.js",
-        "dev": "concurrently -n \"SERVER,CLIENT\" -c \"magenta,cyan\" \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+        "seed": "npm run seed --prefix server",
+        "dev": "concurrently -n \"SERVER,CLIENT\" -c \"magenta,cyan\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+        "build": "npm --prefix client run build",
+        "start": "npm run start --prefix server"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"

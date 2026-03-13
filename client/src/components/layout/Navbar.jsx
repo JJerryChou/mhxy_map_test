@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Map, PlusCircle, Database, User } from 'lucide-react';
+import { LogOut, Map, PlusCircle, Database, User, Settings } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -38,6 +38,9 @@ const Navbar = () => {
                     <>
                         <Link to="/admin/prices" className="text-gray-600 hover:text-blue-600 font-medium flex items-center gap-2">
                             <PlusCircle className="w-5 h-5" /> 价格管理
+                        </Link>
+                        <Link to="/admin/maps" className="text-gray-600 hover:text-blue-600 font-medium flex items-center gap-2">
+                            <Settings className="w-5 h-5" /> 地图设置
                         </Link>
                         <Link to="/admin/users" className="text-gray-600 hover:text-blue-600 font-medium flex items-center gap-2">
                             <User className="w-5 h-5" /> 用户管理

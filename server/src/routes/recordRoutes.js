@@ -4,7 +4,12 @@ const router = express.Router();
 const recordController = require('../controllers/recordController');
 const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const fs = require('fs');
+const { importsDir } = require('../config');
+
+fs.mkdirSync(importsDir, { recursive: true });
+
+const upload = multer({ dest: importsDir });
 
 // Public (or authenticated?) - Requirement: "All users can see all data". 
 // Let's require auth for consistency, or strictly follow "All users to see". 

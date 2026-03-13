@@ -2,8 +2,9 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const { dbPath } = require('./config');
 
-const dbPath = path.resolve(__dirname, '../database.sqlite');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
@@ -40,6 +41,15 @@ db.serialize(() => {
         item_type TEXT NOT NULL,
         item_name TEXT UNIQUE NOT NULL,
         price REAL NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Map settings table
+    db.run(`CREATE TABLE IF NOT EXISTS map_settings (
+        map_name TEXT PRIMARY KEY,
+        image_url TEXT,
+        max_x INTEGER,
+        max_y INTEGER,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 

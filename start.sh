@@ -2,6 +2,12 @@
 
 # 梦幻西游挖图预测分析系统 - 启动脚本
 
+if [ "${NODE_ENV:-development}" = "production" ]; then
+    echo "🚀 生产模式启动后端服务..."
+    npm run start
+    exit $?
+fi
+
 echo "🚀 正在检查项目依赖..."
 
 # 检查依赖是否安装
@@ -12,8 +18,12 @@ else
     echo "✅ 依赖已安装"
 fi
 
-echo "🗄️ 确认数据库初始化..."
-npm run seed
+if [ ! -f "server/database.sqlite" ]; then
+    echo "🗄️ 首次启动，正在初始化管理员账号..."
+    npm run seed
+else
+    echo "🗄️ 已检测到本地数据库，跳过管理员初始化"
+fi
 
 echo "🔥 正在启动服务 (后端: 3000, 前端: 5173)..."
 echo "提示: 按下 Ctrl+C 可停止所有服务"
