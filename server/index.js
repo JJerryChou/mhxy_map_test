@@ -76,7 +76,16 @@ app.use((err, req, res, next) => {
     return next(err);
 });
 
-// Start server
-app.listen(config.port, () => {
-    console.log(`Server is running on port ${config.port}`);
-});
+const startServer = async () => {
+    try {
+        await db.ready;
+        app.listen(config.port, () => {
+            console.log(`Server is running on port ${config.port}`);
+        });
+    } catch (err) {
+        console.error('Server failed to start:', err.message);
+        process.exit(1);
+    }
+};
+
+startServer();

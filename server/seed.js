@@ -11,7 +11,15 @@ const closeDatabase = () => {
     });
 };
 
-const seed = () => {
+const seed = async () => {
+    try {
+        await db.ready;
+    } catch (err) {
+        console.error('Database initialization failed:', err.message);
+        process.exit(1);
+        return;
+    }
+
     if (!adminPassword) {
         console.error('ADMIN_PASSWORD is required to bootstrap an admin user.');
         process.exitCode = 1;
