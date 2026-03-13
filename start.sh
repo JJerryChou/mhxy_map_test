@@ -8,6 +8,9 @@ if [ "${NODE_ENV:-development}" = "production" ]; then
     exit $?
 fi
 
+DATA_ROOT="${APP_DATA_DIR:-data}"
+DB_FILE="${DB_PATH:-$DATA_ROOT/database.sqlite}"
+
 echo "🚀 正在检查项目依赖..."
 
 # 检查依赖是否安装
@@ -18,7 +21,7 @@ else
     echo "✅ 依赖已安装"
 fi
 
-if [ ! -f "server/database.sqlite" ]; then
+if [ ! -f "$DB_FILE" ]; then
     echo "🗄️ 首次启动，正在初始化管理员账号..."
     npm run seed
 else

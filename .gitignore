@@ -3,3 +3,6 @@ node_modules/
 .env*
 api.zip
 *.log
+.npm-cache/
+logs/
+data/

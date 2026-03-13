@@ -27,6 +27,21 @@ const deleteFileIfExists = (filePath) => {
     }
 };
 
+const getMapSettingsRow = (mapName, callback) => {
+    db.get(
+        'SELECT map_name, image_url, max_x, max_y, updated_at FROM map_settings WHERE map_name = ?',
+        [mapName],
+        callback
+    );
+};
+
+const respondWithMapSetting = (mapName, res, successMessage) => {
+    getMapSettingsRow(mapName, (getErr, row) => {
+        if (getErr) return res.status(500).json({ error: getErr.message });
+        return res.json({ message: successMessage, data: row });
+    });
+};
+
 exports.getMapSettings = (req, res) => {
     db.all('SELECT map_name, image_url, max_x, max_y, updated_at FROM map_settings', [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -47,13 +62,15 @@ exports.getMapSettings = (req, res) => {
     });
 };
 
-exports.updateMapBounds = (req, res) => {
+exports.saveMapSettings = (req, res) => {
     if (!isAdmin(req)) {
+        deleteFileIfExists(req.file?.path);
         return res.status(403).json({ error: 'Permission denied.' });
     }
 
     const { mapName } = req.params;
     if (!isValidMap(mapName)) {
+        deleteFileIfExists(req.file?.path);
         return res.status(400).json({ error: 'Invalid map_name.' });
     }
 
@@ -61,27 +78,39 @@ exports.updateMapBounds = (req, res) => {
     const maxY = Number(req.body.max_y);
 
     if (!Number.isInteger(maxX) || maxX <= 0 || !Number.isInteger(maxY) || maxY <= 0) {
+        deleteFileIfExists(req.file?.path);
         return res.status(400).json({ error: 'max_x and max_y must be positive integers.' });
     }
 
-    const query = `INSERT INTO map_settings (map_name, max_x, max_y, updated_at)
-                   VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                   ON CONFLICT(map_name) DO UPDATE SET
-                   max_x = excluded.max_x,
-                   max_y = excluded.max_y,
-                   updated_at = CURRENT_TIMESTAMP`;
+    const nextImageUrl = req.file ? `${MAP_IMAGE_PREFIX}${req.file.filename}` : null;
 
-    db.run(query, [mapName, maxX, maxY], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
+    getMapSettingsRow(mapName, (findErr, existing) => {
+        if (findErr) {
+            deleteFileIfExists(req.file?.path);
+            return res.status(500).json({ error: findErr.message });
+        }
 
-        db.get(
-            'SELECT map_name, image_url, max_x, max_y, updated_at FROM map_settings WHERE map_name = ?',
-            [mapName],
-            (getErr, row) => {
-                if (getErr) return res.status(500).json({ error: getErr.message });
-                res.json({ message: 'Map bounds updated successfully.', data: row });
+        const previousImageUrl = existing?.image_url || null;
+        const query = `INSERT INTO map_settings (map_name, image_url, max_x, max_y, updated_at)
+                       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                       ON CONFLICT(map_name) DO UPDATE SET
+                       image_url = COALESCE(excluded.image_url, map_settings.image_url),
+                       max_x = excluded.max_x,
+                       max_y = excluded.max_y,
+                       updated_at = CURRENT_TIMESTAMP`;
+
+        db.run(query, [mapName, nextImageUrl, maxX, maxY], function (upsertErr) {
+            if (upsertErr) {
+                deleteFileIfExists(req.file?.path);
+                return res.status(500).json({ error: upsertErr.message });
             }
-        );
+
+            if (nextImageUrl && previousImageUrl && previousImageUrl !== nextImageUrl) {
+                deleteImageByUrl(previousImageUrl);
+            }
+
+            return respondWithMapSetting(mapName, res, 'Map settings updated successfully.');
+        });
     });
 };
 
@@ -122,19 +151,11 @@ exports.uploadMapImage = (req, res) => {
                 return res.status(500).json({ error: upsertErr.message });
             }
 
-            db.get(
-                'SELECT map_name, image_url, max_x, max_y, updated_at FROM map_settings WHERE map_name = ?',
-                [mapName],
-                (getErr, row) => {
-                    if (getErr) return res.status(500).json({ error: getErr.message });
+            if (previousImageUrl && previousImageUrl !== imageUrl) {
+                deleteImageByUrl(previousImageUrl);
+            }
 
-                    if (previousImageUrl && previousImageUrl !== imageUrl) {
-                        deleteImageByUrl(previousImageUrl);
-                    }
-
-                    res.json({ message: 'Map image updated successfully.', data: row });
-                }
-            );
+            return respondWithMapSetting(mapName, res, 'Map image updated successfully.');
         });
     });
 };

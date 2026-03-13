@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../api/axios';
-import { Save, Upload, RefreshCw, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Save, RefreshCw, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -8,8 +8,7 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const MapSettingsPage = () => {
     const [settings, setSettings] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [savingBounds, setSavingBounds] = useState({});
-    const [uploadingImage, setUploadingImage] = useState({});
+    const [savingSettings, setSavingSettings] = useState({});
     const [message, setMessage] = useState({ type: '', text: '' });
     const [boundsForm, setBoundsForm] = useState({});
     const [selectedFiles, setSelectedFiles] = useState({});
@@ -76,26 +75,49 @@ const MapSettingsPage = () => {
         }));
     };
 
-    const saveBounds = async (mapName) => {
+    const clearSelectedImage = (mapName) => {
+        setSelectedFiles((prev) => {
+            const next = { ...prev };
+            delete next[mapName];
+            return next;
+        });
+        setLocalPreviews((prev) => {
+            if (prev[mapName]) URL.revokeObjectURL(prev[mapName]);
+            const next = { ...prev };
+            delete next[mapName];
+            return next;
+        });
+    };
+
+    const saveSettings = async (mapName) => {
         const payload = boundsForm[mapName] || {};
         const maxX = Number(payload.max_x);
         const maxY = Number(payload.max_y);
+        const file = selectedFiles[mapName];
 
         if (!Number.isInteger(maxX) || maxX <= 0 || !Number.isInteger(maxY) || maxY <= 0) {
             setMessage({ type: 'error', text: `${mapName} 的最大 X/Y 必须为正整数。` });
             return;
         }
 
-        setSavingBounds((prev) => ({ ...prev, [mapName]: true }));
+        const form = new FormData();
+        form.append('max_x', String(maxX));
+        form.append('max_y', String(maxY));
+        if (file) {
+            form.append('image', file);
+        }
+
+        setSavingSettings((prev) => ({ ...prev, [mapName]: true }));
         try {
             const encoded = encodeURIComponent(mapName);
-            const res = await api.put(`/map-settings/${encoded}`, { max_x: maxX, max_y: maxY });
+            const res = await api.put(`/map-settings/${encoded}`, form);
             updateLocalSetting(res.data.data);
-            setMessage({ type: 'success', text: `${mapName} 坐标范围已保存。` });
+            clearSelectedImage(mapName);
+            setMessage({ type: 'success', text: `${mapName} 地图设置已保存。` });
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.error || `保存 ${mapName} 失败。` });
         } finally {
-            setSavingBounds((prev) => ({ ...prev, [mapName]: false }));
+            setSavingSettings((prev) => ({ ...prev, [mapName]: false }));
         }
     };
 
@@ -116,40 +138,6 @@ const MapSettingsPage = () => {
             if (prev[mapName]) URL.revokeObjectURL(prev[mapName]);
             return { ...prev, [mapName]: URL.createObjectURL(file) };
         });
-    };
-
-    const uploadImage = async (mapName) => {
-        const file = selectedFiles[mapName];
-        if (!file) {
-            setMessage({ type: 'error', text: `请先为 ${mapName} 选择图片。` });
-            return;
-        }
-
-        setUploadingImage((prev) => ({ ...prev, [mapName]: true }));
-        try {
-            const form = new FormData();
-            form.append('image', file);
-            const encoded = encodeURIComponent(mapName);
-            const res = await api.post(`/map-settings/${encoded}/image`, form);
-            updateLocalSetting(res.data.data);
-            setMessage({ type: 'success', text: `${mapName} 地图图片已更新。` });
-
-            setSelectedFiles((prev) => {
-                const next = { ...prev };
-                delete next[mapName];
-                return next;
-            });
-            setLocalPreviews((prev) => {
-                if (prev[mapName]) URL.revokeObjectURL(prev[mapName]);
-                const next = { ...prev };
-                delete next[mapName];
-                return next;
-            });
-        } catch (err) {
-            setMessage({ type: 'error', text: err.response?.data?.error || `上传 ${mapName} 图片失败。` });
-        } finally {
-            setUploadingImage((prev) => ({ ...prev, [mapName]: false }));
-        }
     };
 
     const getPreviewUrl = (mapName) => {
@@ -211,15 +199,12 @@ const MapSettingsPage = () => {
                                     onChange={(e) => onSelectImage(setting.map_name, e.target.files?.[0])}
                                     className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => uploadImage(setting.map_name)}
-                                    className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
-                                    disabled={uploadingImage[setting.map_name]}
-                                >
-                                    {uploadingImage[setting.map_name] ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                </button>
                             </div>
+                            {selectedFiles[setting.map_name] && (
+                                <p className="text-sm text-blue-600">
+                                    已选择新地图图片，点击下方保存按钮后会与坐标一起生效。
+                                </p>
+                            )}
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -248,16 +233,16 @@ const MapSettingsPage = () => {
 
                             <button
                                 type="button"
-                                onClick={() => saveBounds(setting.map_name)}
+                                onClick={() => saveSettings(setting.map_name)}
                                 className="w-full inline-flex items-center justify-center px-3 py-2 rounded-md bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50"
-                                disabled={savingBounds[setting.map_name]}
+                                disabled={savingSettings[setting.map_name]}
                             >
-                                {savingBounds[setting.map_name] ? (
+                                {savingSettings[setting.map_name] ? (
                                     <RefreshCw className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
                                         <Save className="w-4 h-4 mr-2" />
-                                        保存坐标范围
+                                        保存地图和坐标
                                     </>
                                 )}
                             </button>

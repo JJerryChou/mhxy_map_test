@@ -64,8 +64,17 @@ const handleImageUpload = (req, res, next) => {
     });
 };
 
+const handleOptionalImageUpload = (req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('multipart/form-data')) {
+        return next();
+    }
+
+    return handleImageUpload(req, res, next);
+};
+
 router.get('/', authMiddleware, mapSettingsController.getMapSettings);
-router.put('/:mapName', authMiddleware, ensureMapName, mapSettingsController.updateMapBounds);
+router.put('/:mapName', authMiddleware, ensureMapName, handleOptionalImageUpload, mapSettingsController.saveMapSettings);
 router.post('/:mapName/image', authMiddleware, ensureMapName, handleImageUpload, mapSettingsController.uploadMapImage);
 
 module.exports = router;

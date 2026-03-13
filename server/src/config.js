@@ -2,7 +2,6 @@ const path = require('path');
 
 const isProduction = process.env.NODE_ENV === 'production';
 const projectRoot = path.resolve(__dirname, '../..');
-const serverRoot = path.resolve(__dirname, '..');
 
 const resolveProjectPath = (targetPath, fallbackPath) => {
     if (!targetPath) return fallbackPath;
@@ -16,8 +15,9 @@ if (isProduction && !jwtSecret) {
     throw new Error('JWT_SECRET must be set when NODE_ENV=production.');
 }
 
-const dbPath = resolveProjectPath(process.env.DB_PATH, path.join(serverRoot, 'database.sqlite'));
-const uploadsDir = resolveProjectPath(process.env.UPLOAD_DIR, path.join(serverRoot, 'uploads'));
+const appDataDir = resolveProjectPath(process.env.APP_DATA_DIR, path.join(projectRoot, 'data'));
+const dbPath = resolveProjectPath(process.env.DB_PATH, path.join(appDataDir, 'database.sqlite'));
+const uploadsDir = resolveProjectPath(process.env.UPLOAD_DIR, path.join(appDataDir, 'uploads'));
 const importsDir = path.join(uploadsDir, 'imports');
 const mapUploadsDir = path.join(uploadsDir, 'maps');
 const clientDistDir = resolveProjectPath(process.env.CLIENT_DIST_DIR, path.join(projectRoot, 'client', 'dist'));
@@ -34,6 +34,7 @@ const resetAdminPassword = process.env.RESET_ADMIN_PASSWORD === 'true';
 module.exports = {
     adminPassword,
     adminUsername,
+    appDataDir,
     clientDistDir,
     corsOrigins,
     dbPath,
